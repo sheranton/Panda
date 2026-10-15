@@ -20,7 +20,8 @@ and hands launching back to the native launcher via its registered protocol.
 ## Run
 
 ```powershell
-cd C:\Users\td\OmniLauncher
+git clone https://github.com/sheranton/OmniLauncher.git
+cd OmniLauncher
 npm install
 npm start
 ```
