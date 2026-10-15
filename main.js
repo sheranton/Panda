@@ -4,13 +4,17 @@ const fs = require('fs');
 const path = require('path');
 const scanners = require('./scanners');
 
-// SteamGridDB key is injected at build time — from the OMNI_SGDB_KEY env var, or
-// from sgdb-key.js (git-ignored). It never lives in committed source. No key just
-// means keyless Steam-store art only; the app still runs fine.
+// Keys are injected at build time — from env vars (OMNI_SGDB_KEY / OMNI_STEAM_KEY)
+// or from sgdb-key.js (git-ignored). They never live in committed source.
+//   SGDB key  -> cover art for launcher exclusives (optional; Steam art works without)
+//   Steam key -> owned-but-uninstalled Steam games in "All" mode (https://steamcommunity.com/dev/apikey)
 let DEFAULT_SGDB_KEY = process.env.OMNI_SGDB_KEY || '';
-if (!DEFAULT_SGDB_KEY) {
-  try { DEFAULT_SGDB_KEY = require('./sgdb-key').key || ''; } catch {}
-}
+let DEFAULT_STEAM_KEY = process.env.OMNI_STEAM_KEY || '';
+try {
+  const k = require('./sgdb-key');
+  if (!DEFAULT_SGDB_KEY) DEFAULT_SGDB_KEY = k.key || '';
+  if (!DEFAULT_STEAM_KEY) DEFAULT_STEAM_KEY = k.steam || '';
+} catch {}
 
 let win;
 let cfgPath;
@@ -56,10 +60,13 @@ ipcMain.handle('scan', async () => {
   installed.forEach(g => { g.installed = true; });
 
   let steamLibraryPrivate = false;
+  let steamNoKey = false;
   const extra = [];
   try {
-    const lib = await scanners.steamLibrary();
+    const steamKey = (loadCfg().steamKey || '').trim() || DEFAULT_STEAM_KEY;
+    const lib = await scanners.steamLibrary(steamKey);
     steamLibraryPrivate = !!lib.private;
+    steamNoKey = !!lib.noKey;
     const have = new Set(installed.filter(g => g.platform === 'Steam').map(g => g.appid));
     for (const o of lib.games) {
       if (have.has(o.appid) || scanners.STEAM_SKIP.has(o.appid)) continue;
@@ -81,7 +88,7 @@ ipcMain.handle('scan', async () => {
   const cfg = loadCfg();
   cfg.cache = games;
   saveCfg(cfg);
-  return { games, steamLibraryPrivate };
+  return { games, steamLibraryPrivate, steamNoKey };
 });
 
 ipcMain.handle('launch', async (_e, game) => {
@@ -182,6 +189,9 @@ async function sgdbArt(game, key) {
 ipcMain.handle('art:getKey', () => loadCfg().sgdbKey || '');
 ipcMain.handle('art:setKey', (_e, k) => { const c = loadCfg(); c.sgdbKey = (k || '').trim(); saveCfg(c); return true; });
 ipcMain.handle('art:clearCache', () => { const c = loadCfg(); c.artCache = {}; saveCfg(c); return true; });
+
+ipcMain.handle('steam:getKey', () => loadCfg().steamKey || '');
+ipcMain.handle('steam:setKey', (_e, k) => { const c = loadCfg(); c.steamKey = (k || '').trim(); saveCfg(c); return true; });
 
 ipcMain.handle('art:resolve', async (_e, game) => {
   const cfg = loadCfg();

@@ -124,31 +124,32 @@ async function getSteamId(steamPath) {
   } catch { return null; }
 }
 
-// Keyless owned-games list via the public community XML (needs public game details).
-async function fetchSteamOwned(steamid) {
+// Owned-games list via the official Steam Web API. One bundled key works for any
+// profile whose Game details privacy is Public. (The old community XML endpoint now
+// forces a login for everyone, so it can't be used.)
+async function fetchSteamOwned(steamid, key) {
+  if (!key) return { noKey: true, private: false, games: [] };
   try {
-    const r = await fetch(`https://steamcommunity.com/profiles/${steamid}/games?tab=all&xml=1`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const url = 'https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=' +
+      encodeURIComponent(key) + '&steamid=' + steamid +
+      '&include_appinfo=1&include_played_free_games=1&skip_unvetted_apps=0&format=json';
+    const r = await fetch(url);
     if (!r.ok) return { private: true, games: [] };
-    const t = await r.text();
-    const games = [];
-    for (const m of t.matchAll(/<game>([\s\S]*?)<\/game>/g)) {
-      const idm = m[1].match(/<appID>(\d+)<\/appID>/);
-      const nm = m[1].match(/<name><!\[CDATA\[([\s\S]*?)\]\]><\/name>/);
-      if (idm) games.push({ appid: idm[1], name: nm ? nm[1] : 'App ' + idm[1] });
-    }
-    // no <gamesList> payload => profile is private / game details hidden
-    const isPrivate = games.length === 0 && !/<gamesList/i.test(t);
-    return { private: isPrivate, games };
+    const j = await r.json();
+    const resp = j && j.response;
+    // public profile -> response.games present; private game details -> empty {}
+    if (!resp || resp.games === undefined) return { private: true, games: [] };
+    const games = (resp.games || []).map(g => ({ appid: String(g.appid), name: g.name || ('App ' + g.appid) }));
+    return { private: false, games };
   } catch { return { private: true, games: [] }; }
 }
 
-async function steamLibrary() {
+async function steamLibrary(key) {
   const steamPath = await getSteamPath();
-  if (!steamPath) return { private: false, steamid: null, games: [] };
+  if (!steamPath) return { private: false, steamid: null, games: [], noKey: !key };
   const steamid = await getSteamId(steamPath);
-  if (!steamid) return { private: false, steamid: null, games: [] };
-  const res = await fetchSteamOwned(steamid);
+  if (!steamid) return { private: false, steamid: null, games: [], noKey: !key };
+  const res = await fetchSteamOwned(steamid, key);
   return { ...res, steamid };
 }
 

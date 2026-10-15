@@ -10,5 +10,7 @@ contextBridge.exposeInMainWorld('omni', {
   resolveCover: (game) => ipcRenderer.invoke('art:resolve', game),
   getArtKey: () => ipcRenderer.invoke('art:getKey'),
   setArtKey: (k) => ipcRenderer.invoke('art:setKey', k),
-  clearArtCache: () => ipcRenderer.invoke('art:clearCache')
+  clearArtCache: () => ipcRenderer.invoke('art:clearCache'),
+  getSteamKey: () => ipcRenderer.invoke('steam:getKey'),
+  setSteamKey: (k) => ipcRenderer.invoke('steam:setKey', k)
 });

@@ -14,6 +14,7 @@ let cfg = { favorites: [], hidden: [], cache: [] };
 let activePlatform = 'All';
 let mode = 'installed';           // 'installed' | 'all'
 let steamPrivate = false;
+let steamNoKey = false;
 
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('status');
@@ -183,10 +184,17 @@ function makeCard(g) {
 }
 
 function updateHint() {
-  if (mode === 'all' && steamPrivate) {
+  if (mode === 'all' && steamNoKey) {
     hintEl.innerHTML =
-      'Steam library looks private — set <b>Steam → Settings → Privacy → Game details</b> to ' +
-      '<b>Public</b>, then <a id="hintRescan">rescan</a> to see your uninstalled games.';
+      'To list Steam games you own but haven\'t installed, add a free Steam Web API key in ' +
+      '<a id="hintSettings">⚙ Settings</a>.';
+    hintEl.classList.remove('hidden');
+    const s = document.getElementById('hintSettings');
+    if (s) s.onclick = openSettings;
+  } else if (mode === 'all' && steamPrivate) {
+    hintEl.innerHTML =
+      'Steam returned no library — set <b>Steam → Settings → Privacy → Game details</b> to ' +
+      '<b>Public</b>, then <a id="hintRescan">rescan</a>.';
     hintEl.classList.remove('hidden');
     const r = document.getElementById('hintRescan');
     if (r) r.onclick = doScan;
@@ -214,6 +222,7 @@ async function doScan() {
   const res = await window.omni.scan();
   allGames = res.games || [];
   steamPrivate = !!res.steamLibraryPrivate;
+  steamNoKey = !!res.steamNoKey;
   buildFilters();
   render();
 }
@@ -246,27 +255,35 @@ async function init() {
     };
   });
 
-  // settings / cover-art panel
+  // settings panel
   const modal = document.getElementById('settings');
   const keyInput = document.getElementById('sgdbKey');
-  document.getElementById('settingsBtn').onclick = async () => {
-    keyInput.value = await window.omni.getArtKey();
-    modal.classList.remove('hidden');
-    keyInput.focus();
-  };
+  const steamKeyInput = document.getElementById('steamKey');
+  document.getElementById('settingsBtn').onclick = openSettings;
   document.getElementById('closeSettings').onclick = () => modal.classList.add('hidden');
   modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
   document.getElementById('getKey').onclick = () =>
     window.omni.openUrl('https://www.steamgriddb.com/profile/preferences/api');
+  document.getElementById('getSteamKey').onclick = () =>
+    window.omni.openUrl('https://steamcommunity.com/dev/apikey');
   document.getElementById('refetch').onclick = async () => {
     await window.omni.clearArtCache();
     render();
   };
   document.getElementById('saveKey').onclick = async () => {
     await window.omni.setArtKey(keyInput.value);
+    await window.omni.setSteamKey(steamKeyInput.value);
     modal.classList.add('hidden');
-    render(); // missing covers now resolve through SteamGridDB
+    doScan(); // re-resolve art + refetch owned Steam library with the new keys
   };
+}
+
+async function openSettings() {
+  const modal = document.getElementById('settings');
+  document.getElementById('sgdbKey').value = await window.omni.getArtKey();
+  document.getElementById('steamKey').value = await window.omni.getSteamKey();
+  modal.classList.remove('hidden');
+  document.getElementById('sgdbKey').focus();
 }
 
 init();
