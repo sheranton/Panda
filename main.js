@@ -50,13 +50,38 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-// scan all launchers; also cache the result so the UI can paint instantly next launch
+// scan all launchers; append owned-but-uninstalled Steam titles; cache for instant repaint
 ipcMain.handle('scan', async () => {
-  const games = await scanners.scanAll();
+  const installed = await scanners.scanAll();
+  installed.forEach(g => { g.installed = true; });
+
+  let steamLibraryPrivate = false;
+  const extra = [];
+  try {
+    const lib = await scanners.steamLibrary();
+    steamLibraryPrivate = !!lib.private;
+    const have = new Set(installed.filter(g => g.platform === 'Steam').map(g => g.appid));
+    for (const o of lib.games) {
+      if (have.has(o.appid) || scanners.STEAM_SKIP.has(o.appid)) continue;
+      extra.push({
+        id: 'steam-' + o.appid,
+        appid: o.appid,
+        name: o.name,
+        platform: 'Steam',
+        installed: false,
+        installDir: null,
+        cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${o.appid}/library_600x900.jpg`,
+        coverFallback: `https://cdn.cloudflare.steamstatic.com/steam/apps/${o.appid}/header.jpg`,
+        launch: { type: 'uri', value: `steam://install/${o.appid}`, install: true }
+      });
+    }
+  } catch {}
+
+  const games = [...installed, ...extra].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const cfg = loadCfg();
   cfg.cache = games;
   saveCfg(cfg);
-  return games;
+  return { games, steamLibraryPrivate };
 });
 
 ipcMain.handle('launch', async (_e, game) => {

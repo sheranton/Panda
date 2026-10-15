@@ -12,6 +12,8 @@ const PLATFORM_COLORS = {
 let allGames = [];
 let cfg = { favorites: [], hidden: [], cache: [] };
 let activePlatform = 'All';
+let mode = 'installed';           // 'installed' | 'all'
+let steamPrivate = false;
 
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('status');
@@ -19,6 +21,9 @@ const searchEl = document.getElementById('search');
 const favOnlyEl = document.getElementById('favOnly');
 const showHiddenEl = document.getElementById('showHidden');
 const filtersEl = document.getElementById('filters');
+const hintEl = document.getElementById('hint');
+
+const isInstalled = (g) => g.installed !== false;
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
@@ -41,11 +46,17 @@ function isHidden(id) { return cfg.hidden.includes(id); }
 
 async function persist() { await window.omni.setConfig(cfg); }
 
+// games visible in the current mode (before search/platform/fav filters)
+function modeGames() {
+  return mode === 'all' ? allGames : allGames.filter(isInstalled);
+}
+
 function buildFilters() {
-  const platforms = ['All', ...Array.from(new Set(allGames.map(g => g.platform))).sort()];
+  const base = modeGames();
+  const platforms = ['All', ...Array.from(new Set(base.map(g => g.platform))).sort()];
   filtersEl.innerHTML = '';
   for (const p of platforms) {
-    const count = p === 'All' ? allGames.length : allGames.filter(g => g.platform === p).length;
+    const count = p === 'All' ? base.length : base.filter(g => g.platform === p).length;
     const chip = document.createElement('div');
     chip.className = 'chip' + (p === activePlatform ? ' active' : '');
     chip.textContent = p === 'All' ? `All (${count})` : `${p} (${count})`;
@@ -57,7 +68,7 @@ function buildFilters() {
 
 function visibleGames() {
   const q = searchEl.value.trim().toLowerCase();
-  return allGames.filter(g => {
+  return modeGames().filter(g => {
     if (activePlatform !== 'All' && g.platform !== activePlatform) return false;
     if (favOnlyEl.checked && !isFav(g.id)) return false;
     if (!showHiddenEl.checked && isHidden(g.id)) return false;
@@ -118,18 +129,21 @@ function coverElement(g) {
 }
 
 function makeCard(g) {
+  const installed = isInstalled(g);
   const card = document.createElement('div');
-  card.className = 'card' + (isHidden(g.id) ? ' is-hidden' : '');
+  card.className = 'card' + (isHidden(g.id) ? ' is-hidden' : '') + (installed ? '' : ' not-installed');
 
   const badge = `<span class="badge" style="background:${PLATFORM_COLORS[g.platform] || '#444'}">${esc(g.platform)}</span>`;
+  const installTag = installed ? '' : '<span class="install-tag">⤓ INSTALL</span>';
 
   card.innerHTML = `
     ${badge}
+    ${installTag}
     <div class="star${isFav(g.id) ? ' on' : ''}">${isFav(g.id) ? '★' : '☆'}</div>
     <div class="hidebtn">${isHidden(g.id) ? 'unhide' : 'hide'}</div>
     <div class="meta">
       <div class="title">${esc(g.name)}</div>
-      <div class="plat">${esc(g.platform)}</div>
+      <div class="plat">${installed ? esc(g.platform) : 'Not installed · click to install'}</div>
     </div>`;
 
   card.insertBefore(coverElement(g), card.firstChild);
@@ -151,9 +165,12 @@ function makeCard(g) {
   };
 
   card.onclick = async () => {
-    statusEl.textContent = `Launching ${g.name}…`;
+    const installing = !isInstalled(g);
+    statusEl.textContent = (installing ? `Opening install for ${g.name}…` : `Launching ${g.name}…`);
     const r = await window.omni.launch(g);
-    statusEl.textContent = r.ok ? `Launched ${g.name}` : `Failed: ${r.error}`;
+    statusEl.textContent = r.ok
+      ? (installing ? `Install dialog opened for ${g.name}` : `Launched ${g.name}`)
+      : `Failed: ${r.error}`;
   };
 
   // right-click opens the install folder when known
@@ -165,18 +182,38 @@ function makeCard(g) {
   return card;
 }
 
+function updateHint() {
+  if (mode === 'all' && steamPrivate) {
+    hintEl.innerHTML =
+      'Steam library looks private — set <b>Steam → Settings → Privacy → Game details</b> to ' +
+      '<b>Public</b>, then <a id="hintRescan">rescan</a> to see your uninstalled games.';
+    hintEl.classList.remove('hidden');
+    const r = document.getElementById('hintRescan');
+    if (r) r.onclick = doScan;
+  } else {
+    hintEl.classList.add('hidden');
+  }
+}
+
 function render() {
+  updateHint();
   const games = visibleGames();
   grid.innerHTML = '';
   for (const g of games) grid.appendChild(makeCard(g));
-  const total = allGames.length;
-  const hiddenCount = allGames.filter(g => isHidden(g.id)).length;
-  statusEl.textContent = `${games.length} shown · ${total} total across ${new Set(allGames.map(g => g.platform)).size} launchers · ${hiddenCount} hidden`;
+
+  const installedCount = allGames.filter(isInstalled).length;
+  const notInstalled = allGames.length - installedCount;
+  const launchers = new Set(allGames.map(g => g.platform)).size;
+  statusEl.textContent = mode === 'all'
+    ? `${games.length} shown · ${installedCount} installed + ${notInstalled} not installed · ${launchers} launchers`
+    : `${games.length} shown · ${installedCount} installed · ${launchers} launchers`;
 }
 
 async function doScan() {
   statusEl.textContent = 'Scanning your launchers…';
-  allGames = await window.omni.scan();
+  const res = await window.omni.scan();
+  allGames = res.games || [];
+  steamPrivate = !!res.steamLibraryPrivate;
   buildFilters();
   render();
 }
@@ -198,6 +235,16 @@ async function init() {
   favOnlyEl.onchange = render;
   showHiddenEl.onchange = render;
   document.getElementById('rescan').onclick = doScan;
+
+  document.querySelectorAll('#modeToggle .seg-btn').forEach(btn => {
+    btn.onclick = () => {
+      mode = btn.dataset.mode;
+      document.querySelectorAll('#modeToggle .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      activePlatform = 'All';
+      buildFilters();
+      render();
+    };
+  });
 
   // settings / cover-art panel
   const modal = document.getElementById('settings');

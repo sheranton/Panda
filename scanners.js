@@ -50,13 +50,19 @@ function walk(dir, cb) {
 }
 
 // ---------- Steam ----------
-async function scanSteam() {
-  const games = [];
-  let steamPath =
+const STEAM_SKIP = new Set(['228980', '1070560', '1391110', '1628350']); // runtimes / redists
+
+async function getSteamPath() {
+  const p =
     parseRegValues(await regQuery('HKCU\\Software\\Valve\\Steam', ['/v', 'SteamPath'])).SteamPath ||
     parseRegValues(await regQuery('HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam', ['/v', 'InstallPath'])).InstallPath;
+  return p ? p.replace(/\//g, '\\') : null;
+}
+
+async function scanSteam() {
+  const games = [];
+  const steamPath = await getSteamPath();
   if (!steamPath) return games;
-  steamPath = steamPath.replace(/\//g, '\\');
 
   const libs = [];
   const libVdf = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
@@ -72,7 +78,6 @@ async function scanSteam() {
   }
   if (!libs.includes(steamPath)) libs.push(steamPath);
 
-  const SKIP = new Set(['228980', '1070560', '1391110', '1628350']); // runtimes / redists
   for (const lib of libs) {
     const appsDir = path.join(lib, 'steamapps');
     let files;
@@ -82,7 +87,7 @@ async function scanSteam() {
       try {
         const acf = parseVDF(fs.readFileSync(path.join(appsDir, f), 'utf8'));
         const app = acf.AppState;
-        if (!app || !app.appid || SKIP.has(app.appid)) continue;
+        if (!app || !app.appid || STEAM_SKIP.has(app.appid)) continue;
         games.push({
           id: 'steam-' + app.appid,
           appid: app.appid,
@@ -97,6 +102,54 @@ async function scanSteam() {
     }
   }
   return games;
+}
+
+// Resolve the currently-logged-in SteamID64 (active user, else most-recent login).
+async function getSteamId(steamPath) {
+  const au = parseRegValues(await regQuery('HKCU\\Software\\Valve\\Steam\\ActiveProcess', ['/v', 'ActiveUser'])).ActiveUser;
+  if (au) {
+    const n = parseInt(au, au.startsWith('0x') ? 16 : 10);
+    if (n > 0) return (BigInt(n) + 76561197960265728n).toString();
+  }
+  try {
+    const data = parseVDF(fs.readFileSync(path.join(steamPath, 'config', 'loginusers.vdf'), 'utf8'));
+    const users = data.users || data.Users || {};
+    let first = null;
+    for (const id of Object.keys(users)) {
+      const u = users[id] || {};
+      if (u.MostRecent === '1' || u.mostrecent === '1') return id;
+      first = first || id;
+    }
+    return first;
+  } catch { return null; }
+}
+
+// Keyless owned-games list via the public community XML (needs public game details).
+async function fetchSteamOwned(steamid) {
+  try {
+    const r = await fetch(`https://steamcommunity.com/profiles/${steamid}/games?tab=all&xml=1`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) return { private: true, games: [] };
+    const t = await r.text();
+    const games = [];
+    for (const m of t.matchAll(/<game>([\s\S]*?)<\/game>/g)) {
+      const idm = m[1].match(/<appID>(\d+)<\/appID>/);
+      const nm = m[1].match(/<name><!\[CDATA\[([\s\S]*?)\]\]><\/name>/);
+      if (idm) games.push({ appid: idm[1], name: nm ? nm[1] : 'App ' + idm[1] });
+    }
+    // no <gamesList> payload => profile is private / game details hidden
+    const isPrivate = games.length === 0 && !/<gamesList/i.test(t);
+    return { private: isPrivate, games };
+  } catch { return { private: true, games: [] }; }
+}
+
+async function steamLibrary() {
+  const steamPath = await getSteamPath();
+  if (!steamPath) return { private: false, steamid: null, games: [] };
+  const steamid = await getSteamId(steamPath);
+  if (!steamid) return { private: false, steamid: null, games: [] };
+  const res = await fetchSteamOwned(steamid);
+  return { ...res, steamid };
 }
 
 // ---------- Epic Games ----------
@@ -396,4 +449,4 @@ async function scanAll() {
   return [...map.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
-module.exports = { scanAll };
+module.exports = { scanAll, steamLibrary, STEAM_SKIP };

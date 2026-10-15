@@ -11,6 +11,10 @@
   <header class="topbar">
     <div class="brand"><span class="logo">◆</span> OmniLauncher</div>
     <input id="search" class="search" type="text" placeholder="Search games…" spellcheck="false" />
+    <div class="seg" id="modeToggle">
+      <button class="seg-btn active" data-mode="installed">Installed</button>
+      <button class="seg-btn" data-mode="all">All games</button>
+    </div>
     <div class="spacer"></div>
     <label class="toggle"><input type="checkbox" id="favOnly" /> Favorites</label>
     <label class="toggle"><input type="checkbox" id="showHidden" /> Show hidden</label>
@@ -36,6 +40,8 @@
   </div>
 
   <nav id="filters" class="filters"></nav>
+
+  <div id="hint" class="hint hidden"></div>
 
   <main id="grid" class="grid"></main>
 
