@@ -6,18 +6,24 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
+    "pack": "electron-packager . OmniLauncher --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=\"(^/dist|^/\\.git)\"",
     "set-key": "node scripts/set-key.js"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "com.omni.launcher",
     "productName": "OmniLauncher",
-    "win": { "target": "nsis" },
-    "files": ["**/*"]
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "**/*"
+    ]
   }
 }

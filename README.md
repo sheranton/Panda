@@ -26,13 +26,23 @@ npm install
 npm start
 ```
 
-## Build a standalone .exe
+## Build
+
+**NSIS installer** (requires Windows Developer Mode or an elevated shell, since
+electron-builder's signing bundle needs symlink permission):
 
 ```powershell
 npm run dist
 ```
 
-Installer lands in `dist\`.
+**Portable build** (no admin needed) — produces a run-anywhere folder with `OmniLauncher.exe`:
+
+```powershell
+npm run pack
+```
+
+Both land in `dist\`. Zip the portable folder to share it. Prebuilt releases are on the
+[Releases page](https://github.com/sheranton/OmniLauncher/releases).
 
 ## Cover art (zero setup)
 
