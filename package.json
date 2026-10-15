@@ -1,6 +1,6 @@
 {
   "name": "omnilauncher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unified game launcher that pulls installed games from Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot and Rockstar into one grid.",
   "main": "main.js",
   "scripts": {
