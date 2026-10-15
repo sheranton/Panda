@@ -318,10 +318,75 @@ async function scanRiot() {
   return games;
 }
 
+// ---------- Rockstar Games Launcher ----------
+const ROCKSTAR_SKIP = new Set([
+  'launcher', 'rockstar games social club', 'social club', 'steam', 'sdk', 'rgl'
+]);
+// primary launch stub per known title; RGL names them Play*.exe
+const ROCKSTAR_EXE = {
+  'grand theft auto v': 'PlayGTAV.exe',
+  'grand theft auto v enhanced': 'PlayGTAV.exe',
+  'gta v enhanced': 'PlayGTAV.exe',
+  'red dead redemption 2': 'PlayRDR2.exe',
+  'red dead redemption': 'RDR.exe',
+  'l.a. noire': 'LANoire.exe',
+  'la noire': 'LANoire.exe',
+  'max payne 3': 'MaxPayne3.exe',
+  'bully: scholarship edition': 'Bully.exe',
+  'grand theft auto iv': 'PlayGTAIV.exe',
+  'grand theft auto iv complete edition': 'PlayGTAIV.exe',
+  'grand theft auto iii': 'PlayGTA3.exe',
+  'grand theft auto: vice city': 'PlayViceCity.exe',
+  'grand theft auto: san andreas': 'PlaySanAndreas.exe'
+};
+
+function findRockstarExe(dir, name) {
+  const mapped = ROCKSTAR_EXE[(name || '').toLowerCase()];
+  if (mapped && fs.existsSync(path.join(dir, mapped))) return path.join(dir, mapped);
+
+  let exes = [];
+  try { exes = fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith('.exe')); } catch {}
+
+  const play = exes.find(f => /^play.*\.exe$/i.test(f)); // Rockstar launch stubs
+  if (play) return path.join(dir, play);
+  if (mapped) return path.join(dir, mapped);
+
+  const bad = /(unins|setup|redist|vcredist|crashpad|dxsetup|service|helper|benchmark|config|report)/i;
+  const candidate = exes.find(f => !bad.test(f));
+  return candidate ? path.join(dir, candidate) : null;
+}
+
+async function scanRockstar() {
+  const games = [];
+  const base = 'HKLM\\SOFTWARE\\WOW6432Node\\Rockstar Games';
+  const subkeys = parseRegSubkeys(await regQuery(base));
+  for (const key of subkeys) {
+    const name = key.split('\\').pop();
+    if (ROCKSTAR_SKIP.has(name.toLowerCase())) continue;
+
+    const v = parseRegValues(await regQuery(key));
+    // a key with only InstallFolderSteam is a Steam-owned copy -> already listed by scanSteam
+    if (!v.InstallFolder && v.InstallFolderSteam) continue;
+    const dir = v.InstallFolder;
+    if (!dir) continue;
+
+    const exe = findRockstarExe(dir, name);
+    games.push({
+      id: 'rockstar-' + name.replace(/\s+/g, '_'),
+      name,
+      platform: 'Rockstar',
+      installDir: dir,
+      cover: null,
+      launch: exe ? { type: 'exe', value: exe, cwd: dir } : { type: 'uri', value: 'rockstar://' }
+    });
+  }
+  return games;
+}
+
 // ---------- aggregate ----------
 async function scanAll() {
   const results = await Promise.allSettled([
-    scanSteam(), scanEpic(), scanGOG(), scanUbisoft(), scanEA(), scanBattleNet(), scanRiot()
+    scanSteam(), scanEpic(), scanGOG(), scanUbisoft(), scanEA(), scanBattleNet(), scanRiot(), scanRockstar()
   ]);
   const all = [];
   for (const r of results) if (r.status === 'fulfilled' && Array.isArray(r.value)) all.push(...r.value);

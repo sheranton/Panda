@@ -5,7 +5,8 @@ const PLATFORM_COLORS = {
   'Ubisoft': '#0f8fe0',
   'EA': '#ff4747',
   'Battle.net': '#148eff',
-  'Riot': '#d13639'
+  'Riot': '#d13639',
+  'Rockstar': '#fcaf17'
 };
 
 let allGames = [];

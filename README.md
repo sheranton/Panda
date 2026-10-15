@@ -15,6 +15,7 @@ and hands launching back to the native launcher via its registered protocol.
 | **EA**         | Origin `*.mfst` + EA Desktop `installerdata.xml`                 | `origin://launchgame/<offer>` |
 | **Battle.net** | `%AppData%\Battle.net\Battle.net.config`                         | `Battle.net.exe --exec="launch <code>"` |
 | **Riot**       | `RiotClientInstalls.json` + `Metadata\`                          | `RiotClientServices.exe --launch-product=<p> --launch-patchline=live` |
+| **Rockstar**   | `HKLM\...\Rockstar Games\<title>\InstallFolder`                   | game launch stub (`Play*.exe`) directly |
 
 ## Run
 
