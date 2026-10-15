@@ -2,7 +2,7 @@
 // Usage:
 //   node scripts/set-key.js <sgdbKey>                 (back-compat: bare arg = SteamGridDB key)
 //   node scripts/set-key.js --sgdb=XXX --steam=YYY
-//   OMNI_SGDB_KEY=XXX OMNI_STEAM_KEY=YYY npm run set-key
+//   PANDA_SGDB_KEY=XXX PANDA_STEAM_KEY=YYY npm run set-key
 const fs = require('fs');
 const path = require('path');
 
@@ -10,8 +10,8 @@ const file = path.join(__dirname, '..', 'sgdb-key.js');
 let cur = { key: '', steam: '' };
 try { cur = { ...cur, ...require(file) }; } catch {}
 
-let sgdb = process.env.OMNI_SGDB_KEY || '';
-let steam = process.env.OMNI_STEAM_KEY || '';
+let sgdb = process.env.PANDA_SGDB_KEY || '';
+let steam = process.env.PANDA_STEAM_KEY || '';
 for (const a of process.argv.slice(2)) {
   if (a.startsWith('--sgdb=')) sgdb = a.slice(7);
   else if (a.startsWith('--steam=')) steam = a.slice(8);
@@ -21,7 +21,7 @@ if (sgdb) cur.key = sgdb.trim();
 if (steam) cur.steam = steam.trim();
 
 if (!cur.key && !cur.steam) {
-  console.error('No keys provided. Pass --sgdb=/--steam= or set OMNI_SGDB_KEY / OMNI_STEAM_KEY.');
+  console.error('No keys provided. Pass --sgdb=/--steam= or set PANDA_SGDB_KEY / PANDA_STEAM_KEY.');
   process.exit(1);
 }
 

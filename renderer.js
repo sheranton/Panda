@@ -47,7 +47,7 @@ const isInstalled = (g) => g.installed !== false;
 const launchCount = (id) => (cfg.launches && cfg.launches[id]) || 0;
 
 async function persist() {
-  await window.omni.setConfig({ favorites: cfg.favorites, hidden: cfg.hidden });
+  await window.panda.setConfig({ favorites: cfg.favorites, hidden: cfg.hidden });
 }
 
 function fmtPlaytime(min) {
@@ -86,7 +86,7 @@ function thumbEl(g, cls) {
     if (i < candidates.length) { img.src = candidates[i]; return; }
     if (!triedSGDB) {
       triedSGDB = true;
-      const u = await window.omni.resolveCover(g);
+      const u = await window.panda.resolveCover(g);
       if (u) { img.src = u; return; }
     }
     const d = document.createElement('div');
@@ -223,9 +223,9 @@ function statRow(label, value) {
 async function launchGame(g) {
   const installing = !isInstalled(g);
   statusEl.textContent = installing ? `Opening install for ${g.name}…` : `Launching ${g.name}…`;
-  const r = await window.omni.launch(g);
+  const r = await window.panda.launch(g);
   if (r.ok && !installing) {
-    cfg = await window.omni.getConfig();          // refresh launch counters
+    cfg = await window.panda.getConfig();          // refresh launch counters
     if (selected === g.id) renderDetail(g);
   }
   statusEl.textContent = r.ok
@@ -260,7 +260,7 @@ function renderDetail(g) {
   const rows = [];
   rows.push(['Platform', g.platform]);
   if (g.playtime2weeks) rows.push(['Past 2 weeks', fmtPlaytime(g.playtime2weeks)]);
-  rows.push(['Launches via OmniLauncher', String(launchCount(g.id))]);
+  rows.push(['Launches via Panda', String(launchCount(g.id))]);
   if (g.appid) rows.push(['Steam AppID', g.appid]);
   if (g.installDir) rows.push(['Install folder', g.installDir]);
   if (!installed) rows.push(['Status', 'Owned — not installed']);
@@ -279,7 +279,7 @@ function renderDetail(g) {
     await persist(); renderSidebar();
   };
   const folder = bar.querySelector('.folder');
-  if (folder) folder.onclick = () => window.omni.openDir(g.installDir);
+  if (folder) folder.onclick = () => window.panda.openDir(g.installDir);
 }
 
 function renderDashboard() {
@@ -310,7 +310,7 @@ function renderDashboard() {
     <div class="stat-cards">
       <div class="stat-card"><div class="k">Total playtime</div><div class="v">${esc(fmtPlaytime(totalPlaytime))}</div><div class="vsub">tracked across Steam</div></div>
       <div class="stat-card"><div class="k">Most played</div><div class="v" style="font-size:19px">${mostPlayed ? esc(mostPlayed.name) : '—'}</div><div class="vsub">${mostPlayed ? esc(fmtPlaytime(mostPlayed.playtimeForever)) : ''}</div></div>
-      <div class="stat-card"><div class="k">Total launches</div><div class="v">${totalLaunches}</div><div class="vsub">via OmniLauncher</div></div>
+      <div class="stat-card"><div class="k">Total launches</div><div class="v">${totalLaunches}</div><div class="vsub">via Panda</div></div>
       <div class="stat-card"><div class="k">Games</div><div class="v">${games.length}</div><div class="vsub">${installedCount} installed</div></div>
       <div class="stat-card"><div class="k">Launchers</div><div class="v">${launchers}</div><div class="vsub">connected</div></div>
     </div>
@@ -398,7 +398,7 @@ function renderAll() {
 
 async function doScan() {
   statusEl.textContent = 'Scanning your launchers…';
-  const res = await window.omni.scan();
+  const res = await window.panda.scan();
   allGames = res.games || [];
   steamPrivate = !!res.steamLibraryPrivate;
   steamNoKey = !!res.steamNoKey;
@@ -409,15 +409,15 @@ async function doScan() {
 /* ---------- settings ---------- */
 async function openSettings() {
   const modal = document.getElementById('settings');
-  document.getElementById('sgdbKey').value = await window.omni.getArtKey();
-  document.getElementById('steamKey').value = await window.omni.getSteamKey();
+  document.getElementById('sgdbKey').value = await window.panda.getArtKey();
+  document.getElementById('steamKey').value = await window.panda.getSteamKey();
   modal.classList.remove('hidden');
   document.getElementById('sgdbKey').focus();
 }
 
 /* ---------- init ---------- */
 async function init() {
-  cfg = await window.omni.getConfig();
+  cfg = await window.panda.getConfig();
   cfg.favorites = cfg.favorites || [];
   cfg.hidden = cfg.hidden || [];
   cfg.launches = cfg.launches || {};
@@ -450,12 +450,12 @@ async function init() {
   document.getElementById('settingsBtn').onclick = openSettings;
   document.getElementById('closeSettings').onclick = () => modal.classList.add('hidden');
   modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
-  document.getElementById('getKey').onclick = () => window.omni.openUrl('https://www.steamgriddb.com/profile/preferences/api');
-  document.getElementById('getSteamKey').onclick = () => window.omni.openUrl('https://steamcommunity.com/dev/apikey');
-  document.getElementById('refetch').onclick = async () => { await window.omni.clearArtCache(); renderAll(); };
+  document.getElementById('getKey').onclick = () => window.panda.openUrl('https://www.steamgriddb.com/profile/preferences/api');
+  document.getElementById('getSteamKey').onclick = () => window.panda.openUrl('https://steamcommunity.com/dev/apikey');
+  document.getElementById('refetch').onclick = async () => { await window.panda.clearArtCache(); renderAll(); };
   document.getElementById('saveKey').onclick = async () => {
-    await window.omni.setArtKey(keyInput.value);
-    await window.omni.setSteamKey(steamKeyInput.value);
+    await window.panda.setArtKey(keyInput.value);
+    await window.panda.setSteamKey(steamKeyInput.value);
     modal.classList.add('hidden');
     doScan();
   };

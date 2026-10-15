@@ -33,6 +33,7 @@ body {
 }
 .brand { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .logo { color: var(--accent); }
+.logo-img { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; display: block; }
 .spacer { flex: 1; }
 .search {
   width: 280px;

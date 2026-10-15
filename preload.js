@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('omni', {
+contextBridge.exposeInMainWorld('panda', {
   scan: () => ipcRenderer.invoke('scan'),
   launch: (game) => ipcRenderer.invoke('launch', game),
   openDir: (dir) => ipcRenderer.invoke('openDir', dir),

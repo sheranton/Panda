@@ -1,8 +1,12 @@
-# OmniLauncher
+<p align="center">
+  <img src="assets/panda.png" width="120" alt="Panda" />
+</p>
 
-A single grid for every game you own across every launcher installed on your PC.
-It reads each launcher's own metadata — no scraping, no accounts, no API keys —
-and hands launching back to the native launcher via its registered protocol.
+<h1 align="center">Panda</h1>
+
+A Steam-style launcher that pulls every game you own across every launcher on your PC
+into one library — with cover art, a detail page per game, and a stats dashboard.
+It reads each launcher's own metadata and hands launching back to the native client.
 
 ## Supported launchers
 
@@ -17,16 +21,29 @@ and hands launching back to the native launcher via its registered protocol.
 | **Riot**       | `RiotClientInstalls.json` + `Metadata\`                          | `RiotClientServices.exe --launch-product=<p> --launch-patchline=live` |
 | **Rockstar**   | `HKLM\...\Rockstar Games\<title>\InstallFolder`                   | game launch stub (`Play*.exe`) directly |
 
+## Features
+
+- **Steam-style UI** — sidebar game list, per-game detail pages (hero banner, Play/Install, stats), and a home dashboard.
+- **Dashboard stats** — total playtime, most played, total launches, recently played, most-played chart. Playtime comes from the Steam Web API; launches are tracked locally.
+- **Installed / All toggle** — see Steam games you own but haven't installed, and install them in place.
+- Cover art resolves automatically, favorites, hide/unhide, per-launcher filters, search.
+
 ## Run
 
 ```powershell
-git clone https://github.com/sheranton/OmniLauncher.git
-cd OmniLauncher
+git clone https://github.com/sheranton/Panda.git
+cd Panda
 npm install
 npm start
 ```
 
 ## Build
+
+**Portable build** (no admin needed) — produces a run-anywhere folder with `Panda.exe`:
+
+```powershell
+npm run pack
+```
 
 **NSIS installer** (requires Windows Developer Mode or an elevated shell, since
 electron-builder's signing bundle needs symlink permission):
@@ -35,54 +52,34 @@ electron-builder's signing bundle needs symlink permission):
 npm run dist
 ```
 
-**Portable build** (no admin needed) — produces a run-anywhere folder with `OmniLauncher.exe`:
+Both land in `dist\`. Prebuilt releases are on the
+[Releases page](https://github.com/sheranton/Panda/releases).
 
-```powershell
-npm run pack
-```
+## Cover art & owned games (zero setup for end users)
 
-Both land in `dist\`. Zip the portable folder to share it. Prebuilt releases are on the
-[Releases page](https://github.com/sheranton/OmniLauncher/releases).
+- **Steam** games use the library capsule / hero art from the CDN.
+- **Non-Steam** games are matched on the Steam store by name (public, keyless).
+- **SteamGridDB** is the catch-all for launcher exclusives.
+- **Owned-but-uninstalled Steam games** come from the Steam Web API.
 
-## Cover art (zero setup)
-
-Art resolves automatically, no key required from the end user:
-
-1. **Steam** games use the library capsule from the CDN (wide header art is letterboxed, never cropped).
-2. **Non-Steam** games are looked up on the **Steam store by name** (public, keyless) and matched
-   against their capsule — covers most multiplatform titles.
-3. **SteamGridDB** is the universal catch-all for launcher exclusives (Fortnite, VALORANT, etc).
-   The key is injected at build time and never lives in the repo — see *Building with art* below.
-4. Anything still unresolved falls back to a generated title tile.
-
-The **⚙** panel lets a power user supply their own SteamGridDB key to override the bundled one.
-All resolved art is cached to disk, so each game is only fetched once.
-
-## Building with art (the SteamGridDB key)
-
-The key is kept out of source control. It lives in `sgdb-key.js` (git-ignored) locally, or in the
-`OMNI_SGDB_KEY` env var in CI, and gets bundled into the built `.exe`.
+Both keys are injected at build time and never live in the repo. They sit in `sgdb-key.js`
+(git-ignored) locally, or in `PANDA_SGDB_KEY` / `PANDA_STEAM_KEY` env vars in CI, and get bundled
+into the built app.
 
 **Local build:**
 ```powershell
-copy sgdb-key.example.js sgdb-key.js   # then paste your key into it
-# or: npm run set-key YOUR_KEY_HERE
-npm run dist
+copy sgdb-key.example.js sgdb-key.js
+npm run set-key --sgdb=YOUR_SGDB_KEY --steam=YOUR_STEAM_KEY
+npm run pack
 ```
 
-**GitHub Actions release:** add your key as a repo secret named `OMNI_SGDB_KEY`
+**GitHub Actions release:** add repo secrets `PANDA_SGDB_KEY` and `PANDA_STEAM_KEY`
 (Settings → Secrets and variables → Actions), then push a tag:
 ```bash
-git tag v1.0.0 && git push --tags
+git tag v1.1.0 && git push --tags
 ```
-`.github/workflows/build.yml` injects the secret, builds, and attaches the installer to the release.
-The repo never contains the key.
 
-> Get a free key: https://www.steamgriddb.com/profile/preferences/api
+> SteamGridDB key: https://www.steamgriddb.com/profile/preferences/api
+> Steam Web API key: https://steamcommunity.com/dev/apikey
 
-## Features
-
-- Search, per-launcher filter chips, favorites (pinned to top), hide/unhide.
-- Search, per-launcher filter chips, favorites (pinned to top), hide/unhide.
-- Right-click a card to open its install folder.
-- Results cached to `userData\omni-config.json` so startup paints instantly, then rescans.
+Resolved art is cached to disk, and the end user's runtime config lives in `userData\panda-config.json`.

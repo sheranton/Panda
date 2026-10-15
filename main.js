@@ -4,12 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const scanners = require('./scanners');
 
-// Keys are injected at build time — from env vars (OMNI_SGDB_KEY / OMNI_STEAM_KEY)
+// Keys are injected at build time — from env vars (PANDA_SGDB_KEY / PANDA_STEAM_KEY)
 // or from sgdb-key.js (git-ignored). They never live in committed source.
 //   SGDB key  -> cover art for launcher exclusives (optional; Steam art works without)
 //   Steam key -> owned-but-uninstalled Steam games in "All" mode (https://steamcommunity.com/dev/apikey)
-let DEFAULT_SGDB_KEY = process.env.OMNI_SGDB_KEY || '';
-let DEFAULT_STEAM_KEY = process.env.OMNI_STEAM_KEY || '';
+let DEFAULT_SGDB_KEY = process.env.PANDA_SGDB_KEY || '';
+let DEFAULT_STEAM_KEY = process.env.PANDA_STEAM_KEY || '';
 try {
   const k = require('./sgdb-key');
   if (!DEFAULT_SGDB_KEY) DEFAULT_SGDB_KEY = k.key || '';
@@ -34,7 +34,8 @@ function createWindow() {
     minWidth: 860,
     minHeight: 560,
     backgroundColor: '#0d0e12',
-    title: 'OmniLauncher',
+    title: 'Panda',
+    icon: path.join(__dirname, 'assets', 'panda.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -47,7 +48,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  cfgPath = path.join(app.getPath('userData'), 'omni-config.json');
+  cfgPath = path.join(app.getPath('userData'), 'panda-config.json');
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });

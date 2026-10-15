@@ -6,7 +6,7 @@ dist/
 sgdb-key.js
 
 # local runtime config / cache
-omni-config.json
+panda-config.json
 
 # misc
 *.log

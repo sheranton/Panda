@@ -1,12 +1,12 @@
 {
-  "name": "omnilauncher",
-  "version": "1.0.2",
-  "description": "Unified game launcher that pulls installed games from Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot and Rockstar into one grid.",
+  "name": "panda",
+  "version": "1.1.0",
+  "description": "Panda — unified game launcher that pulls installed games from Steam, Epic, GOG, Ubisoft, EA, Battle.net, Riot and Rockstar into one grid.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "pack": "electron-packager . OmniLauncher --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=\"(^/dist|^/\\.git)\"",
+    "pack": "electron-packager . Panda --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --icon=build/icon.ico --ignore=\"(^/dist|^/\\.git)\"",
     "set-key": "node scripts/set-key.js"
   },
   "author": "",
@@ -14,13 +14,18 @@
   "devDependencies": {
     "@electron/packager": "^20.3.0",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^3.0.2"
   },
   "build": {
-    "appId": "com.omni.launcher",
-    "productName": "OmniLauncher",
+    "appId": "com.panda.launcher",
+    "productName": "Panda",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "shortcutName": "Panda"
     },
     "files": [
       "**/*"
