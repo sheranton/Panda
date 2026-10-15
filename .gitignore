@@ -1,0 +1,14 @@
+# dependencies & build output
+node_modules/
+dist/
+
+# the bundled SteamGridDB key — never commit this
+sgdb-key.js
+
+# local runtime config / cache
+omni-config.json
+
+# misc
+*.log
+.DS_Store
+Thumbs.db

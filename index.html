@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline';" />
+  <title>OmniLauncher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">◆</span> OmniLauncher</div>
+    <input id="search" class="search" type="text" placeholder="Search games…" spellcheck="false" />
+    <div class="spacer"></div>
+    <label class="toggle"><input type="checkbox" id="favOnly" /> Favorites</label>
+    <label class="toggle"><input type="checkbox" id="showHidden" /> Show hidden</label>
+    <button id="settingsBtn" class="btn" title="Cover art settings">⚙</button>
+    <button id="rescan" class="btn">Rescan</button>
+  </header>
+
+  <div id="settings" class="modal hidden">
+    <div class="modal-box">
+      <h3>Cover art</h3>
+      <p>Art already resolves automatically from Steam and SteamGridDB — no setup
+         needed. Optionally paste your own SteamGridDB API key to raise rate limits
+         and coverage. Art is cached to disk, so it's only fetched once per game.</p>
+      <input id="sgdbKey" class="search" type="text" placeholder="Optional SteamGridDB API key…" spellcheck="false" autocomplete="off" />
+      <div class="modal-actions">
+        <button id="getKey" class="btn">Get a key</button>
+        <span class="spacer"></span>
+        <button id="refetch" class="btn">Clear art cache</button>
+        <button id="closeSettings" class="btn">Close</button>
+        <button id="saveKey" class="btn primary">Save &amp; fetch</button>
+      </div>
+    </div>
+  </div>
+
+  <nav id="filters" class="filters"></nav>
+
+  <main id="grid" class="grid"></main>
+
+  <div id="status" class="status">Scanning your launchers…</div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "omnilauncher",
+  "version": "1.0.0",
+  "description": "Unified game launcher that pulls installed games from Steam, Epic, GOG, Ubisoft, EA, Battle.net and Riot into one grid.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "set-key": "node scripts/set-key.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.omni.launcher",
+    "productName": "OmniLauncher",
+    "win": { "target": "nsis" },
+    "files": ["**/*"]
+  }
+}

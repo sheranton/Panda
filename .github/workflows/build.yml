@@ -1,0 +1,32 @@
+name: build
+
+# Cut a release by pushing a tag, e.g.  git tag v1.0.0 && git push --tags
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      # inject the SteamGridDB key from the repo secret OMNI_SGDB_KEY
+      - run: npm run set-key
+        env:
+          OMNI_SGDB_KEY: ${{ secrets.OMNI_SGDB_KEY }}
+
+      - run: npm run dist
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
