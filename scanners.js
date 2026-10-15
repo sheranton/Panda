@@ -139,7 +139,13 @@ async function fetchSteamOwned(steamid, key) {
     const resp = j && j.response;
     // public profile -> response.games present; private game details -> empty {}
     if (!resp || resp.games === undefined) return { private: true, games: [] };
-    const games = (resp.games || []).map(g => ({ appid: String(g.appid), name: g.name || ('App ' + g.appid) }));
+    const games = (resp.games || []).map(g => ({
+      appid: String(g.appid),
+      name: g.name || ('App ' + g.appid),
+      playtime_forever: g.playtime_forever || 0,   // minutes, all time
+      playtime_2weeks: g.playtime_2weeks || 0,     // minutes, last 2 weeks
+      rtime_last_played: g.rtime_last_played || 0  // unix seconds
+    }));
     return { private: false, games };
   } catch { return { private: true, games: [] }; }
 }

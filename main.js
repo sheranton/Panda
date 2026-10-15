@@ -67,6 +67,19 @@ ipcMain.handle('scan', async () => {
     const lib = await scanners.steamLibrary(steamKey);
     steamLibraryPrivate = !!lib.private;
     steamNoKey = !!lib.noKey;
+
+    // attach playtime / last-played to already-installed Steam games
+    const playMap = new Map(lib.games.map(o => [o.appid, o]));
+    for (const g of installed) {
+      if (g.platform !== 'Steam') continue;
+      const o = playMap.get(g.appid);
+      if (o) {
+        g.playtimeForever = o.playtime_forever;
+        g.playtime2weeks = o.playtime_2weeks;
+        g.lastPlayed = o.rtime_last_played;
+      }
+    }
+
     const have = new Set(installed.filter(g => g.platform === 'Steam').map(g => g.appid));
     for (const o of lib.games) {
       if (have.has(o.appid) || scanners.STEAM_SKIP.has(o.appid)) continue;
@@ -77,6 +90,9 @@ ipcMain.handle('scan', async () => {
         platform: 'Steam',
         installed: false,
         installDir: null,
+        playtimeForever: o.playtime_forever,
+        playtime2weeks: o.playtime_2weeks,
+        lastPlayed: o.rtime_last_played,
         cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${o.appid}/library_600x900.jpg`,
         coverFallback: `https://cdn.cloudflare.steamstatic.com/steam/apps/${o.appid}/header.jpg`,
         launch: { type: 'uri', value: `steam://install/${o.appid}`, install: true }
@@ -91,11 +107,22 @@ ipcMain.handle('scan', async () => {
   return { games, steamLibraryPrivate, steamNoKey };
 });
 
+function trackLaunch(game) {
+  if (!game || !game.id || (game.launch && game.launch.install)) return;
+  const c = loadCfg();
+  c.launches = c.launches || {};
+  c.lastLaunched = c.lastLaunched || {};
+  c.launches[game.id] = (c.launches[game.id] || 0) + 1;
+  c.lastLaunched[game.id] = Date.now();
+  saveCfg(c);
+}
+
 ipcMain.handle('launch', async (_e, game) => {
   try {
     if (!game || !game.launch) return { ok: false, error: 'no launch target' };
     if (game.launch.type === 'uri') {
       await shell.openExternal(game.launch.value);
+      trackLaunch(game);
       return { ok: true };
     }
     if (!fs.existsSync(game.launch.value)) return { ok: false, error: 'executable not found: ' + game.launch.value };
@@ -105,6 +132,7 @@ ipcMain.handle('launch', async (_e, game) => {
       cwd: game.launch.cwd || path.dirname(game.launch.value)
     });
     child.unref();
+    trackLaunch(game);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };
@@ -216,4 +244,5 @@ ipcMain.handle('art:resolve', async (_e, game) => {
 });
 
 ipcMain.handle('getConfig', () => loadCfg());
-ipcMain.handle('setConfig', (_e, c) => { saveCfg(c); return true; });
+// merge partial config so launch stats written by the main process aren't clobbered
+ipcMain.handle('setConfig', (_e, partial) => { saveCfg(Object.assign(loadCfg(), partial || {})); return true; });
